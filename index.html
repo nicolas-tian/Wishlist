@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lista de Deseos</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+<style>
+/* ─── TOKENS ─────────────────────────────────────────────── */
+:root {
+  --bg:           #EDE8D8;
+  --bg-dot:       rgba(60,90,154,0.12);
+  --surface:      #FFFDF5;
+  --surface-h:    #FFF8E0;
+  --surface-taken:#D4D0C2;
+  --text:         #1A1A2E;
+  --muted:        #5A5A7A;
+  --red:          #EE1515;
+  --yellow:       #FFCB05;
+  --outline:      #1A1A2E;
+  --c-border:     rgba(26,26,46,0.14);
+  --c-border-tk:  rgba(26,26,46,0.22);
+  --c-shadow:     0 4px 14px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.07);
+  --dlg-bg:       #FFFDF5;
+  --dlg-border:   #1A1A2E;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:           #0A0A1A;
+    --bg-dot:       rgba(255,203,5,0.07);
+    --surface:      #141428;
+    --surface-h:    #1E1E38;
+    --surface-taken:#08081A;
+    --text:         #E8E8F5;
+    --muted:        #7070A0;
+    --red:          #FF4444;
+    --yellow:       #FFCB05;
+    --outline:      #E8E8F5;
+    --c-border:     rgba(255,203,5,0.18);
+    --c-border-tk:  rgba(255,203,5,0.08);
+    --c-shadow:     0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,203,5,0.10);
+    --dlg-bg:       #141428;
+    --dlg-border:   #FFCB05;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:           #0A0A1A;
+  --bg-dot:       rgba(255,203,5,0.07);
+  --surface:      #141428;
+  --surface-h:    #1E1E38;
+  --surface-taken:#08081A;
+  --text:         #E8E8F5;
+  --muted:        #7070A0;
+  --red:          #FF4444;
+  --yellow:       #FFCB05;
+  --outline:      #E8E8F5;
+  --c-border:     rgba(255,203,5,0.18);
+  --c-border-tk:  rgba(255,203,5,0.08);
+  --c-shadow:     0 4px 20px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,203,5,0.10);
+  --dlg-bg:       #141428;
+  --dlg-border:   #FFCB05;
+  color-scheme: dark;
+}
+
+/* ─── BASE ───────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  background-image: radial-gradient(circle, var(--bg-dot) 1px, transparent 1px);
+  background-size: 22px 22px;
+  color: var(--text);
+  font-family: 'Nunito', sans-serif;
+  margin: 0;
+  padding-inline: 16px;
+  padding-block-end: 40px;
+}
+
+/* ─── HERO ───────────────────────────────────────────────── */
+.hero {
+  text-align: center;
+  padding: 48px 0 36px;
+  position: relative;
+  overflow: hidden;
+}
+.hero-bg-ball {
+  position: absolute;
+  width: 310px; height: 310px;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0.06;
+  pointer-events: none;
+  color: var(--text);
+}
+.hero-inner { position: relative; z-index: 1; }
+.hero-eyebrow {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  letter-spacing: .18em;
+  color: var(--red);
+  display: block;
+  margin-bottom: 14px;
+}
+.hero-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(20px, 5vw, 30px);
+  line-height: 1.55;
+  color: var(--text);
+  margin: 0 0 10px;
+  text-wrap: balance;
+  text-shadow: 3px 3px 0 var(--yellow), 6px 6px 0 rgba(0,0,0,0.12);
+}
+.hero-sub {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* ─── DIALOGUE ───────────────────────────────────────────── */
+.dialogue {
+  border: 4px solid var(--dlg-border);
+  border-radius: 14px;
+  background: var(--dlg-bg);
+  padding: 16px 22px 18px;
+  max-width: 580px;
+  margin: 0 auto 16px;
+  position: relative;
+}
+.dialogue::after {
+  content: '▼';
+  position: absolute;
+  bottom: -20px; left: 28px;
+  font-size: 12px;
+  color: var(--dlg-border);
+}
+.dialogue p {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8.5px;
+  line-height: 2.1;
+  color: var(--text);
+  margin: 0;
+}
+
+/* ─── COUNTER ROW ────────────────────────────────────────── */
+.counter-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 0 auto 28px;
+}
+.counter {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--muted);
+}
+.counter strong { color: var(--red); }
+.save-badge {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6.5px;
+  color: var(--muted);
+  opacity: 0;
+  transition: opacity .25s;
+}
+.save-badge.on { opacity: 1; }
+
+/* ─── GRID ───────────────────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
+  gap: 14px;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+/* ─── CARD ───────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 2px solid var(--c-border);
+  border-radius: 18px;
+  padding: 18px 20px;
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease, background .2s ease;
+  box-shadow: var(--c-shadow);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  user-select: none;
+}
+.card:hover:not(.claimed) {
+  transform: translateY(-4px);
+  box-shadow: var(--c-shadow), 0 10px 28px rgba(0,0,0,0.14);
+  background: var(--surface-h);
+}
+.card:focus-visible { outline: 3px solid var(--yellow); outline-offset: 3px; }
+
+/* ── CLAIMED STATE ── */
+.card.claimed {
+  background: var(--surface-taken);
+  border-color: var(--c-border-tk);
+  box-shadow: none;
+}
+.card.claimed:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+.card.claimed .item-name { color: var(--muted); }
+.card.claimed .type-badge { opacity: 0.45; }
+
+.card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pb { width: 50px; height: 50px; flex-shrink: 0; transition: filter .3s ease; }
+.claimed .pb { filter: grayscale(1) brightness(0.75); }
+
+.type-badge {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  padding: 5px 9px;
+  border-radius: 7px;
+  color: #fff;
+  letter-spacing: .04em;
+  white-space: nowrap;
+  transition: opacity .2s;
+}
+
+.item-name {
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--text);
+  line-height: 1.3;
+  margin: 0;
+  transition: color .2s;
+}
+
+/* Status row */
+.item-status {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7.5px;
+  padding-top: 10px;
+  border-top: 1.5px solid var(--c-border);
+  line-height: 1.8;
+  margin-top: auto;
+}
+.item-status.ok  { color: #22AA55; }
+.item-status.no {
+  color: var(--surface);
+  background: var(--muted);
+  border-radius: 8px;
+  padding: 8px 12px;
+  border-top: none;
+  text-align: center;
+  letter-spacing: .06em;
+}
+.release-hint {
+  display: none;
+  font-size: 6.5px;
+  opacity: 0.8;
+  margin-top: 2px;
+}
+.card.claimed:hover .release-hint { display: block; }
+
+/* ─── LOADING STATE ──────────────────────────────────────── */
+.loading-overlay {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+  transition: opacity .4s;
+}
+.loading-overlay.hidden { opacity: 0; pointer-events: none; }
+.loading-text {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  animation: blink 1s step-end infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ─── CAUGHT ANIMATION ───────────────────────────────────── */
+@keyframes caught {
+  0%   { opacity: 0; transform: scale(.5) rotate(-8deg); }
+  20%  { opacity: 1; transform: scale(1.2) rotate(4deg); }
+  65%  { opacity: 1; transform: scale(1) rotate(0deg); }
+  100% { opacity: 0; transform: scale(.85); }
+}
+.caught-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.12);
+  border-radius: 16px;
+  animation: caught 1.6s ease-out forwards;
+  pointer-events: none;
+  z-index: 5;
+}
+.caught-overlay span {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 13px;
+  color: #FFCB05;
+  text-shadow: 2px 2px 0 #1A1A2E, -1px -1px 0 #1A1A2E, 1px -1px 0 #1A1A2E;
+}
+
+/* ─── REDUCED MOTION ─────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .card { transition: none; }
+  @keyframes caught {
+    0%, 100% { opacity: 0; }
+    20%, 65%  { opacity: 1; transform: scale(1); }
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loading">
+  <span class="loading-text">cargando…</span>
+</div>
+
+<!-- HERO -->
+<header class="hero">
+  <svg class="hero-bg-ball" viewBox="0 0 200 200" aria-hidden="true">
+    <circle cx="100" cy="100" r="92" fill="none" stroke="currentColor" stroke-width="7"/>
+    <path d="M8 100 A92 92 0 0 1 192 100 Z" fill="currentColor"/>
+    <rect x="8" y="90" width="184" height="20" fill="var(--bg)"/>
+    <circle cx="100" cy="100" r="26" fill="var(--bg)" stroke="currentColor" stroke-width="7"/>
+    <circle cx="100" cy="100" r="12" fill="currentColor"/>
+  </svg>
+  <div class="hero-inner">
+    <span class="hero-eyebrow">&#10022; pok&eacute;mon gift list &#10022;</span>
+    <h1 class="hero-title">LISTA DE<br>DESEOS</h1>
+    <p class="hero-sub">de Nico &#127881;</p>
+  </div>
+</header>
+
+<main>
+  <div class="dialogue" role="note">
+    <p>Toca un regalo para<br>reservarlo.</p>
+  </div>
+  <div class="counter-row">
+    <span class="counter" id="counter" aria-live="polite">
+      <strong>0</strong>/10 reservados
+    </span>
+    <span class="save-badge" id="save-badge">guardando…</span>
+  </div>
+  <div class="grid" id="grid" role="list" aria-label="Lista de regalos"></div>
+</main>
+
+<script>
+/* ─── CONFIG ─────────────────────────────────────────────── */
+const DB_URL = 'https://wishlist-47de7-default-rtdb.firebaseio.com';
+
+/* ─── ITEMS ─────────────────────────────────────────────── */
+const ITEMS = [
+  { name: "Mascarilla Loreal Glass Skin",          type: "WATER",    tc: "#1478CC" },
+  { name: "Serum Centella Asiática skin1004", type: "GRASS",    tc: "#1F8B2B" },
+  { name: "Vasos de Greenglass",                   type: "ICE",      tc: "#2A9DB5" },
+  { name: "Sahnne Nuss XL",                        type: "NORMAL",   tc: "#9A8A6A" },
+  { name: "Barritas Twenty’s Chocolate Fudge",type: "FIRE",     tc: "#CC3300" },
+  { name: "Barquillos del Cocolino",               type: "FAIRY",    tc: "#C8609A" },
+  { name: "Skin LoL — Rumble onda espacial",  type: "ELECTRIC", tc: "#C89000" },
+  { name: "Skin LoL — Miel’Koz",         type: "POISON",   tc: "#7A4A9E" },
+  { name: "Skin LoL — Astronautilus",          type: "STEEL",    tc: "#5A7A98" },
+  { name: "Portalápices pokémon / anime / LoL", type: "DRAGON", tc: "#6545C8" },
+];
+
+/* ─── STATE ─────────────────────────────────────────────── */
+let reserved = new Set();
+let isSaving  = false;
+
+/* ─── FIREBASE LOAD ──────────────────────────────────────── */
+async function loadState() {
+  try {
+    const res  = await fetch(`${DB_URL}/wishlist.json`);
+    const data = await res.json();
+    if (data && Array.isArray(data.reserved)) {
+      const next = new Set(data.reserved.map(Number));
+      const changed =
+        next.size !== reserved.size ||
+        [...next].some(i => !reserved.has(i));
+      if (changed) {
+        reserved = next;
+        render();
+      }
+    }
+  } catch (e) {
+    console.warn('wishlist load error:', e);
+  }
+}
+
+/* ─── FIREBASE SAVE ──────────────────────────────────────── */
+async function saveState() {
+  if (isSaving) return;
+  isSaving = true;
+  document.getElementById('save-badge').classList.add('on');
+  try {
+    await fetch(`${DB_URL}/wishlist.json`, {
+      method:  'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ reserved: [...reserved] }),
+    });
+  } catch (e) {
+    console.warn('wishlist save error:', e);
+  } finally {
+    isSaving = false;
+    document.getElementById('save-badge').classList.remove('on');
+  }
+}
+
+/* ─── INIT ───────────────────────────────────────────────── */
+(async () => {
+  await loadState();
+  document.getElementById('loading').classList.add('hidden');
+  render();
+  setInterval(loadState, 8000);
+})();
+
+/* ─── POKEBALL ──────────────────────────────────────────── */
+function pokeball(claimed) {
+  const top  = claimed ? '#787878' : '#EE1515';
+  const bot  = claimed ? '#B8B8B8' : '#FFFFFF';
+  const line = claimed ? '#454545' : '#1A1A2E';
+  const btn  = claimed ? '#9A9A9A' : '#FFFFFF';
+  return `<svg class="pb" viewBox="0 0 60 60" aria-hidden="true">
+    <ellipse cx="30" cy="57" rx="17" ry="4" fill="rgba(0,0,0,0.10)"/>
+    <path d="M5 30 A25 25 0 0 1 55 30 Z" fill="${top}"/>
+    <path d="M5 30 A25 25 0 0 0 55 30 Z" fill="${bot}"/>
+    <circle cx="30" cy="30" r="25" fill="none" stroke="${line}" stroke-width="3.5"/>
+    <rect x="5" y="27" width="50" height="6" fill="${line}"/>
+    <circle cx="30" cy="30" r="10" fill="${line}"/>
+    <circle cx="30" cy="30" r="7"  fill="${btn}"/>
+    <circle cx="26" cy="26" r="2.5" fill="rgba(255,255,255,0.55)"/>
+  </svg>`;
+}
+
+/* ─── RENDER ────────────────────────────────────────────── */
+function render(animateIdx = -1) {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+
+  ITEMS.forEach((item, i) => {
+    const claimed = reserved.has(i);
+    const card    = document.createElement('div');
+    card.className = 'card' + (claimed ? ' claimed' : '');
+    card.setAttribute('role', 'listitem');
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('aria-label',
+      `${item.name} — ${claimed ? 'reservado' : 'disponible'}`);
+    card.dataset.idx = String(i);
+
+    card.innerHTML = `
+      <div class="card-top">
+        ${pokeball(claimed)}
+        <span class="type-badge" style="background:${item.tc}">${item.type}</span>
+      </div>
+      <p class="item-name">${item.name}</p>
+      <div class="item-status ${claimed ? 'no' : 'ok'}">
+        ${claimed
+          ? `✓ RESERVADO<br><span class="release-hint">toca para liberar</span>`
+          : '▷ DISPONIBLE'}
+      </div>`;
+
+    const go = () => {
+      if (isSaving) return;
+      if (reserved.has(i)) {
+        reserved.delete(i);
+        render(-1);
+      } else {
+        reserved.add(i);
+        render(i);
+      }
+      saveState();
+    };
+    card.addEventListener('click', go);
+    card.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); }
+    });
+
+    grid.appendChild(card);
+  });
+
+  /* ¡ATRAPADO! overlay */
+  if (animateIdx >= 0) {
+    const newCard = grid.querySelector(`[data-idx="${animateIdx}"]`);
+    if (newCard) {
+      const ov = document.createElement('div');
+      ov.className = 'caught-overlay';
+      ov.innerHTML = '<span>¡ATRAPADO!</span>';
+      newCard.appendChild(ov);
+      ov.addEventListener('animationend', () => ov.remove());
+    }
+  }
+
+  /* Counter */
+  document.getElementById('counter').innerHTML =
+    `<strong>${reserved.size}</strong>/${ITEMS.length} reservados`;
+}
+</script>
+</body>
+</html>
