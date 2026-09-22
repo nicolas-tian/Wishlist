@@ -1,3 +1,8 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lista de Deseos</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 
@@ -139,16 +144,28 @@ body {
   margin: 0;
 }
 
-/* ─── COUNTER ────────────────────────────────────────────── */
+/* ─── COUNTER ROW ────────────────────────────────────────── */
+.counter-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 0 auto 28px;
+}
 .counter {
   font-family: 'Press Start 2P', monospace;
   font-size: 8px;
   color: var(--muted);
-  text-align: center;
-  display: block;
-  margin: 0 auto 28px;
 }
 .counter strong { color: var(--red); }
+.save-badge {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6.5px;
+  color: var(--muted);
+  opacity: 0;
+  transition: opacity .25s;
+}
+.save-badge.on { opacity: 1; }
 
 /* ─── GRID ───────────────────────────────────────────────── */
 .grid {
@@ -251,6 +268,23 @@ body {
 }
 .card.claimed:hover .release-hint { display: block; }
 
+/* ─── LOADING STATE ──────────────────────────────────────── */
+.loading-overlay {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+  transition: opacity .4s;
+}
+.loading-overlay.hidden { opacity: 0; pointer-events: none; }
+.loading-text {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  animation: blink 1s step-end infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
 /* ─── CAUGHT ANIMATION ───────────────────────────────────── */
 @keyframes caught {
   0%   { opacity: 0; transform: scale(.5) rotate(-8deg); }
@@ -283,6 +317,13 @@ body {
   }
 }
 </style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loading">
+  <span class="loading-text">cargando…</span>
+</div>
 
 <!-- HERO -->
 <header class="hero">
@@ -294,9 +335,9 @@ body {
     <circle cx="100" cy="100" r="12" fill="currentColor"/>
   </svg>
   <div class="hero-inner">
-    <span class="hero-eyebrow">✦ pokémon gift list ✦</span>
+    <span class="hero-eyebrow">&#10022; pok&eacute;mon gift list &#10022;</span>
     <h1 class="hero-title">LISTA DE<br>DESEOS</h1>
-    <p class="hero-sub">de Nico 🎉</p>
+    <p class="hero-sub">de Nico &#127881;</p>
   </div>
 </header>
 
@@ -304,38 +345,83 @@ body {
   <div class="dialogue" role="note">
     <p>Toca un regalo para<br>reservarlo.</p>
   </div>
-  <span class="counter" id="counter" aria-live="polite">0/7 reservados</span>
+  <div class="counter-row">
+    <span class="counter" id="counter" aria-live="polite">
+      <strong>0</strong>/10 reservados
+    </span>
+    <span class="save-badge" id="save-badge">guardando…</span>
+  </div>
   <div class="grid" id="grid" role="list" aria-label="Lista de regalos"></div>
 </main>
 
 <script>
+/* ─── CONFIG ─────────────────────────────────────────────── */
+const DB_URL = 'https://wishlist-47de7-default-rtdb.firebaseio.com';
+
+/* ─── ITEMS ─────────────────────────────────────────────── */
 const ITEMS = [
-  { name: "Mascarilla Loreal Glass Skin",      type: "WATER",    tc: "#1478CC" },
-  { name: "Serum Centella Asiática skin1004",  type: "GRASS",    tc: "#1F8B2B" },
-  { name: "Vasos de Greenglass",               type: "ICE",      tc: "#2A9DB5" },
-  { name: "Sahnne Nuss XL",                   type: "NORMAL",   tc: "#9A8A6A" },
-  { name: "Barritas Twenty's Chocolate Fudge", type: "FIRE",     tc: "#CC3300" },
-  { name: "Barquillos del Cocolino",           type: "FAIRY",    tc: "#C8609A" },
-  { name: "Skin LoL — Rumble onda espacial",   type: "ELECTRIC", tc: "#C89000" },
-  { name: "Skin LoL — Miel'Koz",              type: "POISON",   tc: "#7A4A9E" },
+  { name: "Mascarilla Loreal Glass Skin",          type: "WATER",    tc: "#1478CC" },
+  { name: "Serum Centella Asiática skin1004", type: "GRASS",    tc: "#1F8B2B" },
+  { name: "Vasos de Greenglass",                   type: "ICE",      tc: "#2A9DB5" },
+  { name: "Sahnne Nuss XL",                        type: "NORMAL",   tc: "#9A8A6A" },
+  { name: "Barritas Twenty’s Chocolate Fudge",type: "FIRE",     tc: "#CC3300" },
+  { name: "Barquillos del Cocolino",               type: "FAIRY",    tc: "#C8609A" },
+  { name: "Skin LoL — Rumble onda espacial",  type: "ELECTRIC", tc: "#C89000" },
+  { name: "Skin LoL — Miel’Koz",         type: "POISON",   tc: "#7A4A9E" },
   { name: "Skin LoL — Astronautilus",          type: "STEEL",    tc: "#5A7A98" },
-  { name: "Portalápices pokémon / anime / LoL", type: "DRAGON",  tc: "#6545C8" },
+  { name: "Portalápices pokémon / anime / LoL", type: "DRAGON", tc: "#6545C8" },
 ];
 
-const STORAGE_KEY = 'wishlist-reserved-v2';
+/* ─── STATE ─────────────────────────────────────────────── */
+let reserved = new Set();
+let isSaving  = false;
 
-function loadState() {
+/* ─── FIREBASE LOAD ──────────────────────────────────────── */
+async function loadState() {
   try {
-    const s = localStorage.getItem(STORAGE_KEY);
-    return s ? new Set(JSON.parse(s)) : new Set();
-  } catch { return new Set(); }
-}
-function saveState() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify([...reserved])); }
-  catch { /* silent */ }
+    const res  = await fetch(`${DB_URL}/wishlist.json`);
+    const data = await res.json();
+    if (data && Array.isArray(data.reserved)) {
+      const next = new Set(data.reserved.map(Number));
+      const changed =
+        next.size !== reserved.size ||
+        [...next].some(i => !reserved.has(i));
+      if (changed) {
+        reserved = next;
+        render();
+      }
+    }
+  } catch (e) {
+    console.warn('wishlist load error:', e);
+  }
 }
 
-let reserved = loadState();
+/* ─── FIREBASE SAVE ──────────────────────────────────────── */
+async function saveState() {
+  if (isSaving) return;
+  isSaving = true;
+  document.getElementById('save-badge').classList.add('on');
+  try {
+    await fetch(`${DB_URL}/wishlist.json`, {
+      method:  'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ reserved: [...reserved] }),
+    });
+  } catch (e) {
+    console.warn('wishlist save error:', e);
+  } finally {
+    isSaving = false;
+    document.getElementById('save-badge').classList.remove('on');
+  }
+}
+
+/* ─── INIT ───────────────────────────────────────────────── */
+(async () => {
+  await loadState();
+  document.getElementById('loading').classList.add('hidden');
+  render();
+  setInterval(loadState, 8000);
+})();
 
 /* ─── POKEBALL ──────────────────────────────────────────── */
 function pokeball(claimed) {
@@ -356,18 +442,19 @@ function pokeball(claimed) {
 }
 
 /* ─── RENDER ────────────────────────────────────────────── */
-function render() {
+function render(animateIdx = -1) {
   const grid = document.getElementById('grid');
   grid.innerHTML = '';
 
   ITEMS.forEach((item, i) => {
     const claimed = reserved.has(i);
-    const card = document.createElement('div');
+    const card    = document.createElement('div');
     card.className = 'card' + (claimed ? ' claimed' : '');
     card.setAttribute('role', 'listitem');
     card.setAttribute('tabindex', '0');
     card.setAttribute('aria-label',
       `${item.name} — ${claimed ? 'reservado' : 'disponible'}`);
+    card.dataset.idx = String(i);
 
     card.innerHTML = `
       <div class="card-top">
@@ -381,35 +468,41 @@ function render() {
           : '▷ DISPONIBLE'}
       </div>`;
 
-    const toggle = () => {
-      if (claimed) {
+    const go = () => {
+      if (isSaving) return;
+      if (reserved.has(i)) {
         reserved.delete(i);
+        render(-1);
       } else {
         reserved.add(i);
-        requestAnimationFrame(() => {
-          const ov = document.createElement('div');
-          ov.className = 'caught-overlay';
-          ov.innerHTML = '<span>¡ATRAPADO!</span>';
-          card.appendChild(ov);
-          ov.addEventListener('animationend', () => ov.remove());
-        });
+        render(i);
       }
       saveState();
-      render();
     };
-
-    card.addEventListener('click', toggle);
+    card.addEventListener('click', go);
     card.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); }
     });
 
     grid.appendChild(card);
   });
 
-  const n = reserved.size;
-  document.getElementById('counter').innerHTML =
-    `<strong>${n}</strong>/${ITEMS.length} reservados`;
-}
+  /* ¡ATRAPADO! overlay */
+  if (animateIdx >= 0) {
+    const newCard = grid.querySelector(`[data-idx="${animateIdx}"]`);
+    if (newCard) {
+      const ov = document.createElement('div');
+      ov.className = 'caught-overlay';
+      ov.innerHTML = '<span>¡ATRAPADO!</span>';
+      newCard.appendChild(ov);
+      ov.addEventListener('animationend', () => ov.remove());
+    }
+  }
 
-render();
+  /* Counter */
+  document.getElementById('counter').innerHTML =
+    `<strong>${reserved.size}</strong>/${ITEMS.length} reservados`;
+}
 </script>
+</body>
+</html>
